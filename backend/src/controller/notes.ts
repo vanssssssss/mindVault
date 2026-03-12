@@ -50,20 +50,51 @@ export async function createNote(req: AuthRequest, res:Response){
 //get all notes with their tags
 export async function getAllNotes(req: AuthRequest, res:Response){
     const userId = req.user_id;
+    let {page,limit,tag,search} = req.query;
 
+    page = page??"1";
+    limit = limit??"10";
+    tag = tag??"";
+    search = search ?? "";
+    let offset:number = (Number(page)-1)*Number(limit);
     const notes = await pool.query(
         `SELECT 
-            n.notes_id,n.title, n.content, 
-            COALESCE (array_agg(t.tag_name) FILTER (WHERE t.tag_name IS NOT NULL),'{}') as tags
-        FROM notes n
-        LEFT JOIN notes_tags nt ON n.notes_id = nt.notes_id
-        LEFT JOIN tags t ON nt.tags_id = t.tag_id
-        WHERE n.user_id = $1
-        GROUP BY n.notes_id
-        ORDER BY n.updated_at;`
-        ,[userId]);
+            n.title, n.content, 
+            COALESCE(array_agg(t.tag_name) FILTER (WHERE t.tag_name IS NOT NULL),'{}') AS tags 
+        FROM notes n 
+        LEFT JOIN notes_tags nt ON n.notes_id = nt.notes_id 
+        LEFT JOIN tags t ON nt.tags_id = t.tag_id 
+        WHERE n.user_id = $1 
+            AND(n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%') 
+            AND ($3 = '' OR 
+                EXISTS(
+                    SELECT 1 FROM notes_tags nt2 
+                    LEFT JOIN tags t2 ON t2.tag_id = nt2.tags_id 
+                    WHERE n.notes_id = nt2.notes_id AND t2.tag_name = $3
+                )
+            ) 
+        GROUP BY n.notes_id 
+        ORDER BY n.title 
+        LIMIT $4 
+        OFFSET $5;`
+        ,[userId,search,tag,limit,offset]);
 
-    return res.status(200).json({message:"Notes retrieved successfully",notes:notes.rows});
+        const total = await pool.query(
+        `SELECT 
+            COUNT(*) AS count
+        FROM notes n 
+        WHERE n.user_id = $1 
+            AND (n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%') 
+            AND ($3 = '' OR 
+                EXISTS(
+                    SELECT 1 FROM notes_tags nt2 
+                    LEFT JOIN tags t2 ON t2.tag_id = nt2.tags_id 
+                    WHERE n.notes_id = nt2.notes_id AND t2.tag_name = $3
+                )
+            ) ;`
+        ,[userId,search,tag]);
+
+    return res.status(200).json({message:"Notes retrieved successfully",total:total.rows[0].count,page,limit,notes:notes.rows});
 }
 
 export async function getNote(req: AuthRequest, res:Response){
