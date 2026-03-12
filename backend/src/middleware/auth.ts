@@ -12,7 +12,6 @@ export async function verifyToken(req: AuthRequest, res: Response, next: NextFun
     try{
 
         const authHeader = req.headers.authorization;
-
         if(!authHeader || !authHeader.startsWith("Bearer ")){
             return res.status(400).json({message:"Unauthorized access"});
         }
@@ -30,9 +29,7 @@ export async function verifyToken(req: AuthRequest, res: Response, next: NextFun
         const jwt_secret = process.env.JWT_SECRET_KEY;
 
         const decoded = jwt.verify(token,jwt_secret) as {user_id : string};
-
         req.user_id = decoded.user_id;
-
         next();
     }catch(err:any){
         return res.status(400).json({message:"Invalid or expired token"});

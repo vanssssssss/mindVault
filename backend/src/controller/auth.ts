@@ -41,7 +41,7 @@ export async function login(req: Request, res: Response){
     }
     const jwt_secret = process.env.JWT_SECRET_KEY
 
-    const token = await jwt.sign({user_:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
+    const token = await jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
 
     return res.status(200).json({message:"User logged in successfully",user:user.rows[0].user_id,token});
 }
@@ -83,7 +83,7 @@ export async function register(req: Request, res: Response){
     }
     const jwt_secret = process.env.JWT_SECRET_KEY
 
-    const token = await jwt.sign({userId:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
+    const token = await jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
 
     return res.status(200).json({message:"User created successfully",user:user.rows[0].user_id,token});
 }
