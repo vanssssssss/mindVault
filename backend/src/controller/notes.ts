@@ -65,7 +65,7 @@ export async function getAllNotes(req: AuthRequest, res:Response){
         LEFT JOIN notes_tags nt ON n.notes_id = nt.notes_id 
         LEFT JOIN tags t ON nt.tags_id = t.tag_id 
         WHERE n.user_id = $1 
-            AND(n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%') 
+            AND ($2 = '' OR (n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%'))
             AND ($3 = '' OR 
                 EXISTS(
                     SELECT 1 FROM notes_tags nt2 
@@ -84,7 +84,7 @@ export async function getAllNotes(req: AuthRequest, res:Response){
             COUNT(*) AS count
         FROM notes n 
         WHERE n.user_id = $1 
-            AND (n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%') 
+            AND ($2 = '' OR (n.title ILIKE '%'||$2||'%' OR n.content ILIKE '%'||$2||'%'))
             AND ($3 = '' OR 
                 EXISTS(
                     SELECT 1 FROM notes_tags nt2 
