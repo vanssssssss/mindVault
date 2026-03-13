@@ -14,36 +14,37 @@ import jwt from "jsonwebtoken";
 export async function login(req: Request, res: Response){
     const {email,password} = req.body;
     if(!email || !password){
-        return res.status(400).json({error:"Missing feilds!"});
+        return res.status(400).json({message:"Missing feilds!"});
     }
 
     const regrex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if(!regrex.test(email)){
-        return res.status(400).json({error:"Invalid mail"});
+        return res.status(400).json({message:"Invalid mail"});
     }
 
-    const user = await pool.query(`SELECT user_id,password_hash FROM users WHERE email = $1`, [email]);
+    try{
+        const user = await pool.query(`SELECT user_id,password_hash FROM users WHERE email = $1`, [email]);
+        if(!user.rowCount){
+            return res.status(400).json({message:"Wrong email or password"});
+        }
 
-    if(!user.rowCount){
-        return res.status(400).json({error:"Wrong email or password"});
+        const validPassword = await bcrypt.compare(password,user.rows[0].password_hash);
+        if(!validPassword){
+            return res.status(400).json({message:"Wrong email or password"});
+        }
+        if(!process.env.JWT_SECRET_KEY){
+            return res.status(400).json({message:"Missing jwt key"});
+        }
+        
+        const jwt_secret = process.env.JWT_SECRET_KEY
+        const token = jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
+        return res.status(200).json({message:"User logged in successfully",user:user.rows[0].user_id,token});
+    }catch(err:any){
+        return res.status(400).json({message:"Serevr error"});
     }
 
-    const validPassword = await bcrypt.compare(password,user.rows[0].password_hash);
-
-    if(!validPassword){
-        return res.status(400).json({error:"Wrong email or password"});
-    }
-
-
-    if(!process.env.JWT_SECRET_KEY){
-        return res.status(400).json({error:"Missing jwt key"});
-    }
-    const jwt_secret = process.env.JWT_SECRET_KEY
-
-    const token = await jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
-
-    return res.status(200).json({message:"User logged in successfully",user:user.rows[0].user_id,token});
+    
 }
 
 
@@ -57,34 +58,37 @@ export async function login(req: Request, res: Response){
 export async function register(req: Request, res: Response){
     const {name,email,password} = req.body;
     if(!name || !email || !password){
-        return res.status(400).json({error:"Missing feilds!"});
+        return res.status(400).json({message:"Missing feilds!"});
     }
 
     const regrex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if(!regrex.test(email)){
-        return res.status(400).json({error:"Invalid mail"});
+        return res.status(400).json({message:"Invalid mail"});
     }
 
-    const existUser = await pool.query(`SELECT user_id FROM users WHERE email = $1`, [email]);
+    try{
+        const existUser = await pool.query(`SELECT user_id FROM users WHERE email = $1`, [email]);
 
-    if(existUser.rowCount){
-        return res.status(400).json({error:"User already exists"});
+        if(existUser.rowCount){
+            return res.status(400).json({message:"User already exists"});
+        }
+
+        const passwordHash = await bcrypt.hash(password,10);
+
+        const user = await pool.query(`INSERT INTO users(username,email,password_hash) VALUES ($1,$2,$3) RETURNING user_id`,[name,email,passwordHash]);
+
+        if(!process.env.JWT_SECRET_KEY){
+            return res.status(400).json({message:"Missing jwt key"});
+        }
+        const jwt_secret = process.env.JWT_SECRET_KEY
+
+        const token = jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
+
+        return res.status(200).json({message:"User created successfully",user:user.rows[0].user_id,token});
+    }catch(err: any){
+        return res.status(400).json({message:"Server error"});
     }
-
-    const passwordHash = await bcrypt.hash(password,10);
-
-    const result = await pool.query(`INSERT INTO users(username,email,password_hash) VALUES ($1,$2,$3)`,[name,email,passwordHash]);
-
-    const user = await pool.query(`SELECT user_id FROM users WHERE email = $1`, [email]);
-
-    if(!process.env.JWT_SECRET_KEY){
-        return res.status(400).json({error:"Missing jwt key"});
-    }
-    const jwt_secret = process.env.JWT_SECRET_KEY
-
-    const token = await jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
-
-    return res.status(200).json({message:"User created successfully",user:user.rows[0].user_id,token});
+    
 }
 
