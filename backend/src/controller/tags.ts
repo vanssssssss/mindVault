@@ -10,7 +10,7 @@ export async function getAllTags(req: AuthRequest, res: Response){
         const result = await pool.query(`SELECT tag_id,tag_name FROM tags WHERE user_id = $1 ORDER BY tag_name`,[userId]);
         return res.status(200).json({message:"Tags retrieved successfully",tags:result.rows});
     }catch(err:any){
-        return res.status(400).json({message:"Failed to fetch tags"});
+        return res.status(500).json({message:"Failed to fetch tags"});
     }
     
 }
@@ -31,7 +31,7 @@ export async function deleteTag(req: AuthRequest, res: Response){
         }
         return res.status(200).json({message:"Tags deleted successfully"});
     }catch(err:any){
-        return res.status(400).json({message:"Failed to delete tags"});
+        return res.status(500).json({message:"Failed to delete tags"});
     }
 
 }

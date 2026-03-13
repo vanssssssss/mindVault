@@ -37,10 +37,10 @@ export async function createNote(req: AuthRequest, res:Response){
             }
         }
         await client.query("COMMIT");
-        return res.status(200).json({message:"Note added successfully",notes:result.rows[0]});
+        return res.status(201).json({message:"Note added successfully",notes:result.rows[0]});
     }catch(err:any){
         await client.query("ROLLBACK");
-        return res.status(400).json({message:"Failed to create note",err});
+        return res.status(500).json({message:"Failed to create note",err});
     }finally{
         client.release();
     }
@@ -114,7 +114,7 @@ export async function getNote(req: AuthRequest, res:Response){
         ,[noteId,userId]);
 
     if(!note.rowCount){
-        return res.status(400).json({message:"Note not found"});
+        return res.status(404).json({message:"Note not found"});
     }
 
     return res.status(200).json({message:"Note retrieved successfully",notes:note.rows[0]});
@@ -146,7 +146,7 @@ export async function updateNote(req: AuthRequest, res:Response){
 
         if(!result.rowCount){
             await client.query("ROLLBACK");
-            return res.status(400).json({message:"Note not found"});
+            return res.status(404).json({message:"Note not found"});
         }
 
         if(uniqueTags && uniqueTags.length){
@@ -168,7 +168,7 @@ export async function updateNote(req: AuthRequest, res:Response){
 
     }catch(err:any){
         await client.query("ROLLBACK");
-        return res.status(400).json({message:"Failed to update note"});
+        return res.status(500).json({message:"Failed to update note"});
     }finally{
         await client.release();
 
@@ -189,7 +189,7 @@ export async function deleteNote(req: AuthRequest, res:Response){
         return res.status(404).json({message:"Note not found"});
     }
 
-    return res.status(200).json({message:"Note deleted successfully"});
+    return res.status(204).json({message:"Note deleted successfully"});
 }
 
 

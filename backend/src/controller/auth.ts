@@ -26,22 +26,22 @@ export async function login(req: Request, res: Response){
     try{
         const user = await pool.query(`SELECT user_id,password_hash FROM users WHERE email = $1`, [email]);
         if(!user.rowCount){
-            return res.status(400).json({message:"Wrong email or password"});
+            return res.status(401).json({message:"Wrong email or password"});
         }
 
         const validPassword = await bcrypt.compare(password,user.rows[0].password_hash);
         if(!validPassword){
-            return res.status(400).json({message:"Wrong email or password"});
+            return res.status(401).json({message:"Wrong email or password"});
         }
         if(!process.env.JWT_SECRET_KEY){
-            return res.status(400).json({message:"Missing jwt key"});
+            return res.status(500).json({message:"Missing jwt key"});
         }
         
         const jwt_secret = process.env.JWT_SECRET_KEY
         const token = jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
         return res.status(200).json({message:"User logged in successfully",user:user.rows[0].user_id,token});
     }catch(err:any){
-        return res.status(400).json({message:"Serevr error"});
+        return res.status(500).json({message:"Serevr error"});
     }
 
     
@@ -71,7 +71,7 @@ export async function register(req: Request, res: Response){
         const existUser = await pool.query(`SELECT user_id FROM users WHERE email = $1`, [email]);
 
         if(existUser.rowCount){
-            return res.status(400).json({message:"User already exists"});
+            return res.status(409).json({message:"User already exists"});
         }
 
         const passwordHash = await bcrypt.hash(password,10);
@@ -79,15 +79,15 @@ export async function register(req: Request, res: Response){
         const user = await pool.query(`INSERT INTO users(username,email,password_hash) VALUES ($1,$2,$3) RETURNING user_id`,[name,email,passwordHash]);
 
         if(!process.env.JWT_SECRET_KEY){
-            return res.status(400).json({message:"Missing jwt key"});
+            return res.status(500).json({message:"Missing jwt key"});
         }
         const jwt_secret = process.env.JWT_SECRET_KEY
 
         const token = jwt.sign({user_id:user.rows[0].user_id},jwt_secret,{expiresIn:"3d"});
 
-        return res.status(200).json({message:"User created successfully",user:user.rows[0].user_id,token});
+        return res.status(201).json({message:"User created successfully",user:user.rows[0].user_id,token});
     }catch(err: any){
-        return res.status(400).json({message:"Server error"});
+        return res.status(500).json({message:"Server error"});
     }
     
 }
