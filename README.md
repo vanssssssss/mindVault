@@ -1,4 +1,4 @@
-# mindVault Backend
+# MindVault Backend
 
 This is the backend server for a personal note-taking application built using Node.js, Express, TypeScript, and PostgreSQL.  
 It includes RESTful API endpoints for user registration and login, creating and managing notes, organizing notes with tags, and searching and filtering notes.
